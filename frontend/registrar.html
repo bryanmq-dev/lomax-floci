@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lomax — Registrar producto</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="registrar">
+  <header>
+    <h1>Lomax SA</h1>
+    <nav>
+      <a href="index.html">Catálogo</a>
+      <a href="registrar.html">Registrar</a>
+    </nav>
+  </header>
+  <main>
+    <form class="tarjeta" id="form-registro">
+      <label>Código
+        <input type="text" name="codigo" required />
+      </label>
+      <label>Nombre
+        <input type="text" name="nombre" required />
+      </label>
+      <label>Descripción
+        <textarea name="descripcion" rows="2"></textarea>
+      </label>
+      <label>Precio
+        <input type="number" name="precio" step="0.01" min="0" required />
+      </label>
+      <label>Categoría
+        <select name="categoria_id" id="select-categoria" required></select>
+      </label>
+      <div id="campos-atributos"></div>
+      <label>Fotografía (JPEG o PNG, hasta 5 Mb)
+        <input type="file" name="imagen" id="input-imagen" accept="image/jpeg,image/png" />
+      </label>
+      <button type="submit">Registrar producto</button>
+    </form>
+
+    <div class="mensaje" id="mensaje" hidden></div>
+
+    <div class="tarjeta" id="panel-reintento" hidden style="margin-top:16px">
+      <p>El producto <strong id="reintento-id"></strong> quedó <span class="badge PENDIENTE">PENDIENTE</span>.
+         Puedes reintentar sin crear un producto nuevo:</p>
+      <label>Nueva fotografía
+        <input type="file" id="input-reintento-imagen" accept="image/jpeg,image/png" />
+      </label>
+      <button type="button" id="btn-subir-imagen">Subir imagen</button>
+      <button type="button" id="btn-reprocesar" class="secundario">Reprocesar imagen ya guardada</button>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    // Atributos variables por categoria (coincide con db/seed_categorias.sql)
+    const ATRIBUTOS_POR_CATEGORIA = {
+      Teclados: [
+        { nombre: "conexion", etiqueta: "Conexión (USB/Bluetooth)" },
+        { nombre: "distribucion", etiqueta: "Distribución" },
+      ],
+      Mouses: [
+        { nombre: "conexion", etiqueta: "Conexión (USB/Bluetooth)" },
+        { nombre: "dpi", etiqueta: "DPI" },
+      ],
+      Pantallas: [
+        { nombre: "pulgadas", etiqueta: "Pulgadas" },
+        { nombre: "resolucion", etiqueta: "Resolución" },
+      ],
+    };
+
+    const selectCategoria = document.getElementById("select-categoria");
+    const campos = document.getElementById("campos-atributos");
+    const mensaje = document.getElementById("mensaje");
+    let categorias = [];
+
+    function renderAtributos() {
+      const cat = categorias.find((c) => String(c.categoria_id) === selectCategoria.value);
+      const definicion = ATRIBUTOS_POR_CATEGORIA[cat?.nombre] || [];
+      campos.innerHTML = definicion
+        .map((a) => `<label>${a.etiqueta}<input type="text" data-atributo="${a.nombre}" /></label>`)
+        .join("");
+    }
+
+    async function cargarCategorias() {
+      const { data } = await apiGet("/categorias");
+      categorias = data;
+      selectCategoria.innerHTML = categorias
+        .map((c) => `<option value="${c.categoria_id}">${c.nombre}</option>`)
+        .join("");
+      renderAtributos();
+    }
+    selectCategoria.addEventListener("change", renderAtributos);
+    cargarCategorias();
+
+    let productoActual = null;
+
+    async function subirImagen(producto_id, archivo) {
+      const formData = new FormData();
+      formData.append("imagen", archivo);
+      return apiPostForm(`/productos/${producto_id}/imagen`, formData);
+    }
+
+    function mostrarPanelReintento(producto_id) {
+      productoActual = producto_id;
+      document.getElementById("reintento-id").textContent = producto_id;
+      document.getElementById("panel-reintento").hidden = false;
+    }
+
+    document.getElementById("form-registro").addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const form = ev.target;
+      const cat = categorias.find((c) => String(c.categoria_id) === selectCategoria.value);
+      const atributos = {};
+      campos.querySelectorAll("[data-atributo]").forEach((input) => {
+        if (input.value) atributos[input.dataset.atributo] = input.value;
+      });
+
+      const body = {
+        codigo: form.codigo.value,
+        nombre: form.nombre.value,
+        descripcion: form.descripcion.value || undefined,
+        precio: parseFloat(form.precio.value),
+        categoria_id: Number(selectCategoria.value),
+        atributos,
+      };
+
+      const { status, data } = await apiPostJSON("/productos", body);
+      if (status !== 201) {
+        mostrarMensaje(mensaje, data.error || `Error ${status}`, "error");
+        return;
+      }
+
+      const archivo = document.getElementById("input-imagen").files[0];
+      if (!archivo) {
+        mostrarMensaje(mensaje, `Producto ${data.producto_id} creado como PENDIENTE. Falta la fotografía.`, "error");
+        mostrarPanelReintento(data.producto_id);
+        return;
+      }
+
+      const resultadoImagen = await subirImagen(data.producto_id, archivo);
+      if (resultadoImagen.status !== 200) {
+        mostrarMensaje(mensaje, `Producto ${data.producto_id} PENDIENTE: ${resultadoImagen.data.error}`, "error");
+        mostrarPanelReintento(data.producto_id);
+        return;
+      }
+
+      mostrarMensaje(mensaje, `Producto ${resultadoImagen.data.producto_id} PUBLICADO correctamente.`, "ok");
+      form.reset();
+      renderAtributos();
+    });
+
+    document.getElementById("btn-subir-imagen").addEventListener("click", async () => {
+      const archivo = document.getElementById("input-reintento-imagen").files[0];
+      if (!archivo) return mostrarMensaje(mensaje, "Selecciona un archivo primero", "error");
+      const r = await subirImagen(productoActual, archivo);
+      if (r.status === 200) {
+        mostrarMensaje(mensaje, `Producto ${productoActual} PUBLICADO correctamente.`, "ok");
+        document.getElementById("panel-reintento").hidden = true;
+      } else {
+        mostrarMensaje(mensaje, r.data.error || `Error ${r.status}`, "error");
+      }
+    });
+
+    document.getElementById("btn-reprocesar").addEventListener("click", async () => {
+      const { status, data } = await apiPostJSON(`/productos/${productoActual}/reprocesar`, {});
+      if (status === 200) {
+        mostrarMensaje(mensaje, `Producto ${productoActual} PUBLICADO correctamente.`, "ok");
+        document.getElementById("panel-reintento").hidden = true;
+      } else {
+        mostrarMensaje(mensaje, data.error || `Error ${status}`, "error");
+      }
+    });
+  </script>
+</body>
+</html>

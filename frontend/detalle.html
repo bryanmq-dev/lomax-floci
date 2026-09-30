@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lomax — Detalle</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="detalle">
+  <header>
+    <h1>Lomax SA</h1>
+    <nav>
+      <a href="index.html">Catálogo</a>
+      <a href="registrar.html">Registrar</a>
+    </nav>
+  </header>
+  <main>
+    <div class="tarjeta" id="detalle">Cargando...</div>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    async function cargar() {
+      const params = new URLSearchParams(location.search);
+      const id = params.get("id");
+      const contenedor = document.getElementById("detalle");
+      if (!id) {
+        contenedor.textContent = "Falta el parametro id en la URL.";
+        return;
+      }
+      const { status, data } = await apiGet(`/productos/${id}`);
+      if (status !== 200) {
+        contenedor.textContent = data.error || `Producto no encontrado (HTTP ${status})`;
+        return;
+      }
+      const atributos = Object.entries(data.atributos || {})
+        .map(([clave, valor]) => `<dt>${clave}</dt><dd>${valor}</dd>`)
+        .join("");
+      contenedor.innerHTML = `
+        <img src="/api/productos/${id}/imagen" alt="${data.nombre}" style="max-width:300px;border-radius:8px" />
+        <h2>${data.nombre} <span class="badge ${data.estado}">${data.estado}</span></h2>
+        <p>${data.descripcion || ""}</p>
+        <p class="precio">$${Number(data.precio).toFixed(2)} — ${data.categoria}</p>
+        <p>Código: ${data.codigo}</p>
+        <dl class="atributos">${atributos || "<dd>Sin atributos</dd>"}</dl>
+      `;
+    }
+    cargar();
+  </script>
+</body>
+</html>

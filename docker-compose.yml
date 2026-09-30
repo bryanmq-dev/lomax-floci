@@ -1,0 +1,44 @@
+services:
+  proxy:
+    build: ./proxy
+    ports:
+      - "8090:80"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - lomax
+
+  frontend:
+    build: ./frontend
+    networks:
+      - lomax
+
+  backend:
+    build: ./backend
+    environment:
+      AWS_ENDPOINT_URL: http://${FLOCI_IP}:4566
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_REGION: us-east-1
+      PGHOST: ${FLOCI_IP}
+      PGPORT: ${RDS_PORT}
+      PGUSER: lomax_admin
+      PGPASSWORD: lomax_pass_local
+      PGDATABASE: lomax
+      BUCKET_ORIGINALES: lomax-originales
+      BUCKET_MINIATURAS: lomax-miniaturas
+      TABLE_ATRIBUTOS: LomaxAtributos
+      LAMBDA_FUNCTION: lomax-generar-miniatura
+    networks:
+      - lomax
+    # ponytail: el backend tambien se conecta a la red "bridge" de floci con
+    # `docker network connect` en ops/etapa5/implementacion.sh (despues de
+    # `docker compose up`), porque compose no puede declarar esa conexion el
+    # mismo (la red "bridge" por defecto no admite alias de red, que compose
+    # intenta asignar siempre). Sin esa conexion el backend no llega a floci:
+    # ver docs/defensa/guion-defensa.md (Etapa 5) para el detalle.
+
+networks:
+  lomax:

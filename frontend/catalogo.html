@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lomax — Catálogo</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="catalogo">
+  <header>
+    <h1>Lomax SA</h1>
+    <nav>
+      <a href="index.html">Catálogo</a>
+      <a href="registrar.html">Registrar</a>
+    </nav>
+  </header>
+  <main>
+    <div id="estado"></div>
+    <div class="grid" id="grid"></div>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    async function cargar() {
+      const grid = document.getElementById("grid");
+      const estado = document.getElementById("estado");
+      const { status, data } = await apiGet("/productos");
+      if (status !== 200) {
+        estado.textContent = `No se pudo cargar el catálogo (HTTP ${status})`;
+        return;
+      }
+      if (data.length === 0) {
+        estado.textContent = "Todavía no hay productos publicados.";
+        return;
+      }
+      grid.innerHTML = data
+        .map(
+          (p) => `
+        <a class="producto" href="detalle.html?id=${p.producto_id}">
+          <img src="/api/productos/${p.producto_id}/imagen" alt="${p.nombre}" loading="lazy" />
+          <div class="info">
+            <div class="nombre">${p.nombre}</div>
+            <div class="precio">$${Number(p.precio).toFixed(2)}</div>
+            <div class="categoria">${p.categoria}</div>
+          </div>
+        </a>`
+        )
+        .join("");
+    }
+    cargar();
+  </script>
+</body>
+</html>

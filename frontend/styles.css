@@ -1,0 +1,91 @@
+:root {
+  --azul: #4285f4;
+  --verde: #0f9d58;
+  --rojo: #db4437;
+  --gris: #5f6368;
+  --fondo: #f5f6f8;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  margin: 0;
+  background: var(--fondo);
+  color: #202124;
+}
+header {
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+header h1 { font-size: 18px; margin: 0; }
+header nav a {
+  color: var(--gris);
+  text-decoration: none;
+  margin-right: 16px;
+  font-size: 14px;
+}
+header nav a:hover { color: var(--azul); }
+main { padding: 24px; max-width: 1000px; margin: 0 auto; }
+
+form.tarjeta, .tarjeta {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+label { display: block; margin-top: 12px; font-size: 13px; color: var(--gris); }
+input, select, textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-top: 4px;
+}
+button {
+  margin-top: 16px;
+  padding: 10px 18px;
+  background: var(--azul);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+button.secundario { background: var(--gris); }
+button:hover { opacity: 0.9; }
+
+.mensaje { margin-top: 12px; padding: 10px 12px; border-radius: 4px; font-size: 14px; }
+.mensaje.ok { background: #e6f4ea; color: var(--verde); }
+.mensaje.error { background: #fce8e6; color: var(--rojo); }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+.producto {
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+.producto img { width: 100%; height: 160px; object-fit: cover; background: #eee; }
+.producto .info { padding: 10px 12px; }
+.producto .nombre { font-size: 14px; font-weight: 600; }
+.producto .precio { color: var(--azul); font-weight: 600; margin-top: 4px; }
+.producto .categoria { font-size: 12px; color: var(--gris); }
+
+.atributos { margin-top: 12px; }
+.atributos dt { font-size: 12px; color: var(--gris); }
+.atributos dd { margin: 0 0 8px; font-size: 14px; }
+
+.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+.badge.PENDIENTE { background: #fef7e0; color: #b06000; }
+.badge.PUBLICADO { background: #e6f4ea; color: var(--verde); }

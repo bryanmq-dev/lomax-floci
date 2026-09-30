@@ -109,4 +109,31 @@ respuestas, completar pendiente sin crear otro producto")
      real de `floci` (`ops/generar-env-floci.sh`), en vez de un hostname que nunca
      iba a resolver.
 
-<!-- Las secciones de Etapas 5-7 se agregan a medida que se implementa cada una. -->
+## Etapa 5 — Frontend y dashboard (5% Frontend + reto "registrar y consultar desde el
+dashboard, demostrar que los datos provienen de los servicios")
+
+- Las tres vistas son HTML/JS planos sin build step: `catalogo.html` y
+  `detalle.html` hacen `fetch('/api/...')` en el `<script>` de la propia página, así
+  que cualquiera puede abrir las herramientas de desarrollador y ver la llamada real
+  — no hay datos incrustados en el HTML.
+- Refrescar el navegador repite el `fetch`, por eso "conservar la información al
+  actualizar" no necesitó código propio: el estado siempre viene del servidor
+  (RDS/DynamoDB/S3 vía el backend), nunca de `localStorage` ni de estado de un
+  framework.
+- El panel de reintento en `registrar.html` (`POST /productos/:id/imagen` o
+  `POST /productos/:id/reprocesar`) reusa el `producto_id` que ya devolvió la API —
+  es la misma garantía de "no duplicar" que se probó por CLI en la Etapa 4, ahora
+  expuesta en la interfaz.
+- **Otro bug de red real, en la misma familia que el de la Lambda (Etapa 3) y el
+  backend aislado (Etapa 4)**: al conectar el backend a la red `bridge` de floci
+  *desde* `docker-compose.yml`, Docker Compose lo rechazó
+  (`network-scoped aliases are only supported for user-defined networks`) — Compose
+  siempre intenta asignarle un alias de red al servicio, y la red `bridge` por
+  defecto no admite alias. La solución fue no declarar esa red en compose y
+  conectarla aparte con `docker network connect bridge <contenedor>` justo después
+  de `docker compose up` (ver `ops/etapa5/implementacion.sh`). Buen ejemplo para la
+  defensa de que "conectividad con FLOCI" no es un detalle trivial: cada pieza nueva
+  (Lambda, backend suelto, backend en compose, y más adelante los Pods de Etapa 7)
+  tuvo que resolver el mismo problema de red de una forma distinta.
+
+<!-- La seccion de Etapa 6-7 se agrega a medida que se implementa cada una. -->

@@ -17,7 +17,7 @@ comandos de verificación/evidencia y guion de defensa) en
 | 2 — RDS y DynamoDB | P3 | `ops/etapa2/` | ✅ |
 | 3 — S3 y Lambda | P4 | `ops/etapa3/` | ✅ |
 | 4 — Backend y endpoints | P5 | `ops/etapa4/` | ✅ |
-| 5 — Frontend / dashboard | P6 | `ops/etapa5/` | pendiente |
+| 5 — Frontend / dashboard | P6 | `ops/etapa5/` | ✅ |
 | 6 — Imágenes en ECR | P7 | `ops/etapa6/` | pendiente |
 | 7 — Despliegue en EKS | P8 | `ops/etapa7/` | pendiente |
 | Portafolio | P9 | este repo | pendiente |
