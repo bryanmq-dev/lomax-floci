@@ -19,7 +19,7 @@ comandos de verificación/evidencia y guion de defensa) en
 | 4 — Backend y endpoints | P5 | `ops/etapa4/` | ✅ |
 | 5 — Frontend / dashboard | P6 | `ops/etapa5/` | ✅ |
 | 6 — Imágenes en ECR | P7 | `ops/etapa6/` | ✅ |
-| 7 — Despliegue en EKS | P8 | `ops/etapa7/` | pendiente |
+| 7 — Despliegue en EKS | P8 | `ops/etapa7/` | ✅ |
 | Portafolio | P9 | este repo | pendiente |
 | GitHub | P10 | — | pendiente |
 

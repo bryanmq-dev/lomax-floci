@@ -162,4 +162,45 @@ dashboard, demostrar que los datos provienen de los servicios")
   Etapas 4 y 5, ahora ECR): cada servicio nuevo de FLOCI resultó tener su propia
   forma de enrutar el tráfico real, distinta de la API de control.
 
-<!-- La seccion de Etapa 7 se agrega al implementarla. -->
+## Etapa 7 — Despliegue en EKS (5% EKS + reto "relacionar imágenes con ECR, escalar,
+reemplazo sin pérdida")
+
+- `kubectl get pods -o jsonpath='...image'` muestra literalmente la URI de ECR con
+  el tag del commit (Etapa 6) en el campo `image:` de cada Pod. No es casualidad:
+  `kind load docker-image` cargó ese digest exacto directo a los nodos, así que el
+  Pod corre el mismo binario que quedó publicado en ECR, sin volver a construirlo.
+- El header `X-Instancia` (agregado en el backend desde la Etapa 4, `server.mjs`) es
+  literalmente el `HOSTNAME` del Pod — en Kubernetes eso es el nombre del Pod. Seis
+  `curl` seguidos contra el mismo Service reparten las respuestas entre los 3 Pods:
+  esa es la evidencia de que el Service realmente balancea, no solo que "hay 3
+  Pods Ready".
+- Al borrar un Pod, el nuevo tiene un UID distinto (Kubernetes nunca reutiliza UID)
+  y el catálogo nunca deja de responder — porque el Deployment ya tenía 2 réplicas
+  sanas cubriendo mientras se agenda el reemplazo.
+- El producto registrado desde EKS sobrevive a borrar **todos** los Pods del
+  backend a la vez: la prueba definitiva de que el estado vive en RDS/DynamoDB/S3
+  (FLOCI), no en el Pod. Esto es autorrecuperación real, no solo "el número de
+  réplicas volvió a 3".
+- **El cuarto y último bug de conectividad de FLOCI del proyecto (mismo patrón que
+  Lambda, backend suelto, backend en compose y ECR)**: el nodo de kind vive en su
+  propia red docker (`kind`), separada de la red de FLOCI (`bridge`). Se probó
+  primero con un Pod de diagnóstico (`kubectl run test-conn ...`) que confirmó
+  `UNREACHABLE` hacia `10.0.7.2:4566`; la solución fue la misma que en la Etapa 5:
+  `docker network connect bridge lomax-eks-control-plane`. Una vez el *nodo* tiene
+  la ruta, los Pods la heredan vía el NAT que kindnet ya configura para salir del
+  clúster — no hizo falta tocar el CNI.
+- Nota honesta para la defensa: `aws eks create-cluster` en FLOCI **nunca se llama**
+  — solo devolvería metadata falsa (`aws eks list-clusters` demostrado vacío en la
+  Etapa 1). El clúster real es `kind`, y eso se explica así de directo, no se
+  esconde.
+
+## Cierre transversal (útil para "las respuestas conceptuales deben relacionarse
+con las decisiones implementadas")
+
+El proyecto encontró **cuatro bugs de conectividad de FLOCI**, todos con la misma
+forma: la API de *control* (crear recursos, listar, autenticar) funciona siempre;
+el tráfico de *datos* real (ejecutar la Lambda, conectar Postgres, hacer push/pull
+de ECR, o que un Pod llegue a RDS) necesita que quien lo genera esté en la red
+docker correcta. Cada etapa lo resolvió con la misma idea (conectar la red que
+falta, o usar la IP real en vez de un hostname que no resuelve), aplicada al
+contexto de esa etapa. Es el hilo conductor de la defensa técnica de las 7 etapas.

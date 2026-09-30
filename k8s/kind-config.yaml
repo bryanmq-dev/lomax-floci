@@ -1,0 +1,13 @@
+# Etapa 7: clúster kind = el "EKS local" (FLOCI solo simula la API de control de
+# EKS, no agenda Pods reales; ver guion de defensa Etapa 1).
+# Puerto distinto al de docker-compose (8090) para poder dejar ambos corriendo
+# a la vez si hace falta comparar.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: lomax-eks
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080
+        hostPort: 8091
+        protocol: TCP

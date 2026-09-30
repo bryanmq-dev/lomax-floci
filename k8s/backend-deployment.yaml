@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: lomax
+  labels:
+    app: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: __BACKEND_IMAGE__
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4000
+          envFrom:
+            - configMapRef:
+                name: lomax-config
+            - secretRef:
+                name: lomax-secret
+          env:
+            - name: BUCKET_ORIGINALES
+              value: lomax-originales
+            - name: BUCKET_MINIATURAS
+              value: lomax-miniaturas
+            - name: TABLE_ATRIBUTOS
+              value: LomaxAtributos
+            - name: LAMBDA_FUNCTION
+              value: lomax-generar-miniatura
+            - name: AWS_ACCESS_KEY_ID
+              value: test
+            - name: AWS_SECRET_ACCESS_KEY
+              value: test
+            - name: AWS_DEFAULT_REGION
+              value: us-east-1
+            - name: AWS_REGION
+              value: us-east-1
