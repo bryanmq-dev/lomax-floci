@@ -101,10 +101,15 @@
       return apiPostForm(`/productos/${producto_id}/imagen`, formData);
     }
 
-    function mostrarPanelReintento(producto_id) {
+    function mostrarPanelReintento(producto_id, hayOriginal) {
       productoActual = producto_id;
       document.getElementById("reintento-id").textContent = producto_id;
       document.getElementById("panel-reintento").hidden = false;
+      // "Reprocesar" solo tiene sentido si ya se guardo un original en S3 (la
+      // API devuelve paso_fallido cuando eso paso y lo que fallo fue despues,
+      // ej. Lambda). Si el archivo nunca llego a guardarse (400/413/415, sin
+      // paso_fallido) reprocesar siempre daria 409 "no hay imagen original".
+      document.getElementById("btn-reprocesar").hidden = !hayOriginal;
     }
 
     document.getElementById("form-registro").addEventListener("submit", async (ev) => {
@@ -134,14 +139,14 @@
       const archivo = document.getElementById("input-imagen").files[0];
       if (!archivo) {
         mostrarMensaje(mensaje, `Producto ${data.producto_id} creado como PENDIENTE. Falta la fotografía.`, "error");
-        mostrarPanelReintento(data.producto_id);
+        mostrarPanelReintento(data.producto_id, false);
         return;
       }
 
       const resultadoImagen = await subirImagen(data.producto_id, archivo);
       if (resultadoImagen.status !== 200) {
         mostrarMensaje(mensaje, `Producto ${data.producto_id} PENDIENTE: ${resultadoImagen.data.error}`, "error");
-        mostrarPanelReintento(data.producto_id);
+        mostrarPanelReintento(data.producto_id, Boolean(resultadoImagen.data.paso_fallido));
         return;
       }
 
@@ -159,6 +164,7 @@
         document.getElementById("panel-reintento").hidden = true;
       } else {
         mostrarMensaje(mensaje, r.data.error || `Error ${r.status}`, "error");
+        document.getElementById("btn-reprocesar").hidden = !r.data.paso_fallido;
       }
     });
 
