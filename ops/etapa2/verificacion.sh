@@ -20,6 +20,7 @@ refresh_endpoint() {
 refresh_endpoint
 
 echo "--- insercion valida ---"
+$PSQL -c "DELETE FROM productos WHERE codigo='TEC-001';"   # deja el script re-corrible
 $PSQL -c "INSERT INTO productos (codigo,nombre,precio,categoria_id) VALUES ('TEC-001','Teclado Mecanico X',35.90,1) RETURNING producto_id;"
 
 echo "--- codigo duplicado (debe fallar) ---"
@@ -43,9 +44,14 @@ aws dynamodb put-item --table-name LomaxAtributos --item '{
 aws dynamodb get-item --table-name LomaxAtributos --key '{"producto_id": {"S": "1"}}'
 
 echo "--- reinicio sin borrar volumenes ---"
-floci restart
+# OJO: "floci restart" NO reutiliza el flag --persist con el que se levanto el
+# contenedor (bug de la CLI 0.2.3: recrea un volumen anonimo y pierde TODO el
+# estado). El reinicio seguro y equivalente es stop + start --persist.
+# Ver docs/defensa/guion-defensa.md (Etapa 2) para la explicacion completa.
+floci stop
+floci start --persist ~/.floci/data
 floci wait
-refresh_endpoint   # el endpoint puede haber cambiado tras el restart
+refresh_endpoint   # el endpoint cambia de IP/puerto aunque los datos sobrevivan
 $PSQL -c "SELECT count(*) FROM productos;"
 aws dynamodb get-item --table-name LomaxAtributos --key '{"producto_id": {"S": "1"}}'
 

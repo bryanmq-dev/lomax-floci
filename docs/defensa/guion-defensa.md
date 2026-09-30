@@ -32,11 +32,23 @@ duplicado, atributos variables, persistencia tras reinicio")
   `producto_id` como string, y no con una *foreign key* real entre servicios: son dos
   sistemas de persistencia independientes, tal como exige el enunciado ("la relación
   entre bases se verificará desde la API").
-- Después de `floci restart`, señalar que RDS y DynamoDB no perdieron datos porque el
-  contenedor conserva su volumen — la persistencia no depende de que el backend (que
-  todavía no existe en esta etapa) esté arriba.
 - `db/seed_categorias.sql` usa `ON CONFLICT (nombre) DO NOTHING`: correrlo dos veces no
   duplica categorías, es la misma idempotencia que luego se le exige a la carga de
   productos.
+- **Hallazgo de infraestructura que vale la pena mostrar en la defensa**: el comando
+  `floci restart` de la CLI (v0.2.3) tiene un defecto — no reutiliza el flag
+  `--persist` con el que se levantó el contenedor originalmente, así que recrea un
+  volumen Docker anónimo y **pierde todo el estado** (lo comprobamos de forma
+  reproducible: además de los datos de Lomax, se perdieron recursos de 5 días de
+  antigüedad de otro proyecto que compartía el mismo contenedor `floci`). El
+  reinicio "sin borrar volúmenes" que pide el enunciado se logra en cambio con
+  `floci stop && floci start --persist ~/.floci/data`, que sí reconecta el mismo
+  directorio del host. `ops/etapa2/verificacion.sh` usa ese ciclo, no `floci restart`.
+  Mostrar esto en la defensa demuestra que no solo se corrieron los comandos del
+  enunciado, sino que se entendió *qué* estaba persistiendo (el volumen Docker) y
+  *qué* no (el registro en memoria del contenedor recreado).
+- El endpoint de RDS (`Endpoint.Address`/`Endpoint.Port`) cambia en cada ciclo de
+  reinicio aunque los datos sobrevivan — por eso ningún script cachea esos valores
+  más allá de un solo paso; siempre se vuelven a pedir con `describe-db-instances`.
 
 <!-- Las secciones de Etapas 3-7 se agregan a medida que se implementa cada una. -->
