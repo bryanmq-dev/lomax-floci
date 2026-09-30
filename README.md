@@ -8,6 +8,12 @@ Ver el plan completo, con cada etapa detallada (diseño, comandos de implementac
 comandos de verificación/evidencia y guion de defensa) en
 [`docs/`](docs/) y [`ops/`](ops/).
 
+## Equipo
+
+- [@bryanmq-dev](https://github.com/bryanmq-dev)
+- [@dubArguedas](https://github.com/dubArguedas)
+- [@Carlos-Eduardo-Conde-M](https://github.com/Carlos-Eduardo-Conde-M)
+
 ## Mapa de etapas
 
 | Etapa | Entregable | Carpeta de comandos | Estado |
@@ -20,8 +26,8 @@ comandos de verificación/evidencia y guion de defensa) en
 | 5 — Frontend / dashboard | P6 | `ops/etapa5/` | ✅ |
 | 6 — Imágenes en ECR | P7 | `ops/etapa6/` | ✅ |
 | 7 — Despliegue en EKS | P8 | `ops/etapa7/` | ✅ |
-| Portafolio | P9 | este repo | pendiente |
-| GitHub | P10 | — | pendiente |
+| Portafolio | P9 | este repo | ✅ |
+| GitHub | P10 | [github.com/bryanmq-dev/lomax-floci](https://github.com/bryanmq-dev/lomax-floci) | ✅ |
 
 ## Conceptos (Producto 1)
 
