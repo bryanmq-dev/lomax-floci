@@ -1,6 +1,7 @@
 services:
   proxy:
     build: ./proxy
+    image: lomax-proxy:local
     ports:
       - "8090:80"
     depends_on:
@@ -11,11 +12,13 @@ services:
 
   frontend:
     build: ./frontend
+    image: lomax-frontend:local
     networks:
       - lomax
 
   backend:
     build: ./backend
+    image: lomax-backend:local
     environment:
       AWS_ENDPOINT_URL: http://${FLOCI_IP}:4566
       AWS_ACCESS_KEY_ID: test

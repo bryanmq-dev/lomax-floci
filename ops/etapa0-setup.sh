@@ -24,6 +24,16 @@ else
 fi
 floci wait
 
+# floci gestiona algunos servicios (ECR, RDS) con contenedores propios aparte,
+# enlazados por la red docker "floci-net". Si el contenedor principal "floci" se
+# recreo (stop/start) sin reconectarse a esa red, el DATA PLANE de ECR responde
+# 503 aunque describe-repositories / GetAuthorizationToken funcionen bien (son
+# API de control, no pasan por floci-net). Verificado reproduciendo el bug:
+# docker push/pull y docker login fallan sin esta reconexion.
+if docker network inspect floci-net >/dev/null 2>&1; then
+  docker network connect floci-net floci 2>/dev/null || true
+fi
+
 eval "$(floci env)"                # bash; en fish usar: eval (floci env)
 aws sts get-caller-identity        # smoke test contra FLOCI
 

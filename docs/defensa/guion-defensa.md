@@ -136,4 +136,30 @@ dashboard, demostrar que los datos provienen de los servicios")
   (Lambda, backend suelto, backend en compose, y más adelante los Pods de Etapa 7)
   tuvo que resolver el mismo problema de red de una forma distinta.
 
-<!-- La seccion de Etapa 6-7 se agrega a medida que se implementa cada una. -->
+## Etapa 6 — Imágenes en ECR (5% ECR + reto "push, digest remoto, pull, ejecución")
+
+- Cada imagen se etiqueta con `$(git rev-parse --short HEAD)`, no `latest` — vincula
+  la imagen publicada con el commit exacto de entrega, como pide el enunciado.
+- El `imageDigest` que devuelve `describe-images` es el que trae de vuelta el
+  `docker pull` posterior: se borra la copia local antes de traerla de nuevo,
+  así que no hay manera de que el pull esté usando una copia en caché.
+- La imagen recuperada se corre de verdad (no solo se descarga) y se le pega un
+  `curl` real, para demostrar que es la aplicación entregada y no un contenedor vacío.
+- **El hallazgo de infraestructura más grande del proyecto, buen cierre para la
+  defensa de este bloque**: `docker login`/`push`/`pull` contra el registro ECR de
+  FLOCI fallaban con `503 Service Unavailable`, aunque la API de control
+  (`create-repository`, `describe-repositories`, `GetAuthorizationToken`) funcionaba
+  perfecto. La causa: FLOCI corre el *registry* real de Docker que respalda a ECR en
+  un contenedor aparte (`floci-ecr-registry`), enlazado al contenedor principal
+  `floci` mediante una tercera red docker (`floci-net`, con DNS interno) que el
+  contenedor principal **no tenía conectada** después de los reinicios de la Etapa
+  2. La API de control no pasa por esa red (por eso funcionaba), pero el tráfico
+  real de push/pull sí. Se diagnosticó comparando las redes de ambos contenedores
+  (`docker inspect ... NetworkSettings.Networks`) y se corrigió con
+  `docker network connect floci-net floci` — ahora ese chequeo vive en
+  `ops/etapa0-setup.sh` para que no vuelva a pasar. Es el tercer bug de
+  conectividad de FLOCI que aparece en el proyecto (Lambda en Etapa 3, backend en
+  Etapas 4 y 5, ahora ECR): cada servicio nuevo de FLOCI resultó tener su propia
+  forma de enrutar el tráfico real, distinta de la API de control.
+
+<!-- La seccion de Etapa 7 se agrega al implementarla. -->
