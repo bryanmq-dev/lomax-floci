@@ -79,4 +79,34 @@ dimensiones, reintentos sin duplicados")
   el propio override lo estaba rompiendo. La lambda de Lomax simplemente no fija
   esa variable y usa la que FLOCI ya provee.
 
-<!-- Las secciones de Etapas 4-7 se agregan a medida que se implementa cada una. -->
+## Etapa 4 — Backend y endpoints (5% Backend + reto "ejecutar endpoints, interpretar
+respuestas, completar pendiente sin crear otro producto")
+
+- Explicar el flujo PENDIENTE→PUBLICADO como una máquina de estados de dos pasos:
+  `POST /productos` crea el registro base; `POST /productos/:id/imagen` es el
+  **único** camino que publica, y solo lo hace tras confirmar que la Lambda devolvió
+  `ok:true` (Etapa 3) y que DynamoDB tiene el ítem con atributos. Así ningún producto
+  llega al catálogo sin fotografía, que era justo el problema original de Lomax.
+- `reprocesar` nunca crea un `producto_id` nuevo: reusa `imagen_original_key` ya
+  guardado en DynamoDB (Etapa 3) y vuelve a invocar la misma Lambda con esa clave —
+  por eso la miniatura resultante tampoco duplica objetos en S3 (misma clave
+  determinista de Etapa 3).
+- Cada 502/503 devuelve `{"error", "paso_fallido": "s3"|"lambda"|"dynamodb"}` — es la
+  "respuesta que identifica el paso fallido" que pide el enunciado, sin necesidad de
+  revisar logs para saber qué componente falló.
+- El 413 lo produce `multer` solo (limite de 5MB en `memoryStorage`), no un chequeo
+  manual del tamaño del buffer — Express/multer ya resuelven eso.
+- **Dos bugs reales encontrados al probar el backend en su propio contenedor (no en
+  el host), buen contraste para la defensa entre "funciona en mi máquina" y
+  "funciona en un contenedor aislado"**:
+  1. El cliente AWS SDK fallaba con `Region is missing` porque solo se pasó
+     `AWS_ENDPOINT_URL` al contenedor, sin `AWS_ACCESS_KEY_ID` /
+     `AWS_SECRET_ACCESS_KEY` / `AWS_REGION` — variables que en el host las pone
+     `eval $(floci env)`, pero que un contenedor nuevo no hereda solo.
+  2. Igual que con la Lambda en Etapa 3: el contenedor del backend vive en su propia
+     red de Docker, y FLOCI corre en la red `bridge` por defecto (sin DNS por
+     nombre). Se resolvió conectando el contenedor a esa misma red y usando la IP
+     real de `floci` (`ops/generar-env-floci.sh`), en vez de un hostname que nunca
+     iba a resolver.
+
+<!-- Las secciones de Etapas 5-7 se agregan a medida que se implementa cada una. -->
