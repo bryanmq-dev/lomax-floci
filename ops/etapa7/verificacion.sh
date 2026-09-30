@@ -37,6 +37,12 @@ echo "pod nuevo: $NUEVO_POD  uid_despues=$UID_DESPUES (debe ser distinto de $UID
 curl -s -o /dev/null -w "catalogo sigue respondiendo: HTTP %{http_code}\n" http://localhost:8091/catalogo.html
 
 echo "--- registrar un producto nuevo desde EKS ---"
+# deja el script re-corrible: limpia el codigo de prueba de una corrida anterior
+RDS_HOST0=$(aws rds describe-db-instances --db-instance-identifier lomax-db --query 'DBInstances[0].Endpoint.Address' --output text)
+RDS_PORT0=$(aws rds describe-db-instances --db-instance-identifier lomax-db --query 'DBInstances[0].Endpoint.Port' --output text)
+PGPASSWORD=lomax_pass_local psql -h "$RDS_HOST0" -p "$RDS_PORT0" -U lomax_admin -d lomax -c \
+  "DELETE FROM productos WHERE codigo = 'TEC-E7';" >/dev/null
+
 curl -s -X POST $BASE/productos -H 'Content-Type: application/json' -d '{
   "codigo":"TEC-E7","nombre":"Teclado desde EKS","precio":22.5,"categoria_id":1,
   "atributos":{"conexion":"USB","distribucion":"Español"}}' | tee /tmp/e7-post.json | jq
