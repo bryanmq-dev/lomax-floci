@@ -43,7 +43,9 @@ Diagrama con íconos oficiales AWS/Kubernetes:
 ## Defensa
 
 Guion de defensa por etapa, ligado a la tabla de criterios de evaluación:
-[`docs/defensa/guion-defensa.md`](docs/defensa/guion-defensa.md).
+[`docs/defensa/guion-defensa.md`](docs/defensa/guion-defensa.md). Comandos listos
+para correr en el momento de cada uno de los 6 retos de la defensa:
+[`docs/defensa/comandos-defensa.md`](docs/defensa/comandos-defensa.md).
 
 ## Cómo correr cada etapa
 
