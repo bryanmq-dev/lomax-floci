@@ -11,7 +11,9 @@ from diagrams.onprem.client import User
 from diagrams.k8s.compute import Pod, Deploy
 from diagrams.k8s.network import SVC
 
-graph_attr = {"fontsize": "22", "bgcolor": "white"}
+graph_attr = {"fontsize": "20", "bgcolor": "white"}
+node_attr = {"fontsize": "20"}
+edge_attr = {"fontsize": "20"}
 
 with Diagram(
     "Lomax SA - Catalogo de productos (entorno local FLOCI, puerto 4566)",
@@ -19,6 +21,8 @@ with Diagram(
     show=False,
     direction="LR",
     graph_attr=graph_attr,
+    node_attr=node_attr,
+    edge_attr=edge_attr,
 ):
     usuario = User("Vendedor / Cliente\n(navegador)")
 
