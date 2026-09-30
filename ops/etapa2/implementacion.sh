@@ -20,13 +20,13 @@ RDS_HOST=$(aws rds describe-db-instances --db-instance-identifier lomax-db \
 RDS_PORT=$(aws rds describe-db-instances --db-instance-identifier lomax-db \
   --query 'DBInstances[0].Endpoint.Port' --output text)
 
-# se guarda para que verificacion.sh (y las etapas siguientes) no repitan el describe-db-instances
+# Solo se guarda la contraseña: el host/puerto de RDS lo reasigna FLOCI en cada
+# restart, asi que los scripts siguientes lo vuelven a pedir con describe-db-instances
+# en lugar de confiar en un valor cacheado.
 cat > ops/etapa2/.env <<EOF
-export RDS_HOST=$RDS_HOST
-export RDS_PORT=$RDS_PORT
 export PGPASSWORD=lomax_pass_local
 EOF
-echo "RDS listo en $RDS_HOST:$RDS_PORT (guardado en ops/etapa2/.env)"
+echo "RDS listo en $RDS_HOST:$RDS_PORT"
 
 PGPASSWORD=lomax_pass_local psql -h "$RDS_HOST" -p "$RDS_PORT" -U lomax_admin -d lomax -f db/schema.sql
 PGPASSWORD=lomax_pass_local psql -h "$RDS_HOST" -p "$RDS_PORT" -U lomax_admin -d lomax -f db/seed_categorias.sql

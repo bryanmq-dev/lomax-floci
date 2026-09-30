@@ -3,9 +3,21 @@
 set -e
 cd "$(dirname "$0")/../.."
 eval "$(floci env)"
-source ops/etapa2/.env   # trae RDS_HOST, RDS_PORT, PGPASSWORD
+source ops/etapa2/.env   # trae PGPASSWORD (RDS_HOST/RDS_PORT se refrescan abajo)
 
-PSQL="psql -h $RDS_HOST -p $RDS_PORT -U lomax_admin -d lomax"
+# FLOCI reasigna IP/puerto internos del contenedor Postgres detras de RDS en cada
+# restart, asi que el endpoint NUNCA se cachea entre pasos: se relee con
+# describe-db-instances cada vez que puede haber cambiado.
+refresh_endpoint() {
+  RDS_HOST=$(aws rds describe-db-instances --db-instance-identifier lomax-db \
+    --query 'DBInstances[0].Endpoint.Address' --output text)
+  RDS_PORT=$(aws rds describe-db-instances --db-instance-identifier lomax-db \
+    --query 'DBInstances[0].Endpoint.Port' --output text)
+  PSQL="psql -h $RDS_HOST -p $RDS_PORT -U lomax_admin -d lomax"
+  echo "Endpoint RDS actual: $RDS_HOST:$RDS_PORT"
+}
+
+refresh_endpoint
 
 echo "--- insercion valida ---"
 $PSQL -c "INSERT INTO productos (codigo,nombre,precio,categoria_id) VALUES ('TEC-001','Teclado Mecanico X',35.90,1) RETURNING producto_id;"
@@ -33,6 +45,7 @@ aws dynamodb get-item --table-name LomaxAtributos --key '{"producto_id": {"S": "
 echo "--- reinicio sin borrar volumenes ---"
 floci restart
 floci wait
+refresh_endpoint   # el endpoint puede haber cambiado tras el restart
 $PSQL -c "SELECT count(*) FROM productos;"
 aws dynamodb get-item --table-name LomaxAtributos --key '{"producto_id": {"S": "1"}}'
 
