@@ -15,7 +15,7 @@ comandos de verificación/evidencia y guion de defensa) en
 | 0 — Setup | — | `ops/etapa0-setup.sh` | ✅ |
 | 1 — Arquitectura | P2 | `ops/etapa1/` | ✅ |
 | 2 — RDS y DynamoDB | P3 | `ops/etapa2/` | ✅ |
-| 3 — S3 y Lambda | P4 | `ops/etapa3/` | pendiente |
+| 3 — S3 y Lambda | P4 | `ops/etapa3/` | ✅ |
 | 4 — Backend y endpoints | P5 | `ops/etapa4/` | pendiente |
 | 5 — Frontend / dashboard | P6 | `ops/etapa5/` | pendiente |
 | 6 — Imágenes en ECR | P7 | `ops/etapa6/` | pendiente |

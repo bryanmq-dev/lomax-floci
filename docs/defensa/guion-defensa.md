@@ -51,4 +51,32 @@ duplicado, atributos variables, persistencia tras reinicio")
   reinicio aunque los datos sobrevivan — por eso ningún script cachea esos valores
   más allá de un solo paso; siempre se vuelven a pedir con `describe-db-instances`.
 
-<!-- Las secciones de Etapas 3-7 se agregan a medida que se implementa cada una. -->
+## Etapa 3 — S3 y Lambda (5% S3 y Lambda + reto "localizar/descargar miniatura,
+dimensiones, reintentos sin duplicados")
+
+- La clave de salida `miniaturas/{producto_id}.jpg` es determinista por diseño (un
+  producto = una foto): invocar la misma solicitud dos veces sobreescribe el mismo
+  objeto, nunca crea uno nuevo. No es un `if exists` en código, es la clave misma la
+  que impide el duplicado — se demuestra con el conteo de objetos antes/después.
+- `lambda/index.mjs` nunca lanza una excepción sin controlar: siempre responde
+  `{ ok, ... }`. Esto es deliberado — así el llamador (el CLI en esta etapa, el
+  backend en la Etapa 4) decide con el contenido del JSON, sin depender de que AWS
+  marque `FunctionError`. Mostrar el campo `ok` en la salida es justamente el "no
+  basta con un código exitoso de transporte" que pide el enunciado.
+- La validación de formato usa `Jimp.read()` + `getMIME()` — si el buffer no es un
+  JPEG/PNG real, Jimp falla al decodificarlo (no se confía en la extensión del
+  archivo), y eso dispara la rama de `estado_imagen = ERROR`.
+- Explicar la proporción: 1200×800 → 300×200 porque el lado limitante es el ancho
+  (300/1200 = 0.25, aplicado a 800 = 200) — `scaleToFit` hace exactamente eso.
+- **Hallazgo de infraestructura, buen tema para la defensa**: al desplegar la Lambda
+  se le puso explícitamente `AWS_ENDPOINT_URL=http://floci:4566`, pensando que el
+  contenedor de ejecución podría resolver el nombre `floci` por DNS. Falló
+  (`getaddrinfo ENOTFOUND floci`) porque el contenedor de floci corre en la red
+  bridge por defecto de Docker, que no da resolución DNS por nombre de contenedor.
+  Se depuró inyectando una función Lambda de diagnóstico que imprimía
+  `process.env`, lo que reveló que **FLOCI ya inyecta automáticamente**
+  `AWS_ENDPOINT_URL=http://localhost.floci.io:4566` (alcanzable) en cada Lambda —
+  el propio override lo estaba rompiendo. La lambda de Lomax simplemente no fija
+  esa variable y usa la que FLOCI ya provee.
+
+<!-- Las secciones de Etapas 4-7 se agregan a medida que se implementa cada una. -->
