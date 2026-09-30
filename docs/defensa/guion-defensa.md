@@ -68,16 +68,31 @@ dimensiones, reintentos sin duplicados")
   archivo), y eso dispara la rama de `estado_imagen = ERROR`.
 - Explicar la proporción: 1200×800 → 300×200 porque el lado limitante es el ancho
   (300/1200 = 0.25, aplicado a 800 = 200) — `scaleToFit` hace exactamente eso.
-- **Hallazgo de infraestructura, buen tema para la defensa**: al desplegar la Lambda
-  se le puso explícitamente `AWS_ENDPOINT_URL=http://floci:4566`, pensando que el
-  contenedor de ejecución podría resolver el nombre `floci` por DNS. Falló
-  (`getaddrinfo ENOTFOUND floci`) porque el contenedor de floci corre en la red
-  bridge por defecto de Docker, que no da resolución DNS por nombre de contenedor.
-  Se depuró inyectando una función Lambda de diagnóstico que imprimía
-  `process.env`, lo que reveló que **FLOCI ya inyecta automáticamente**
-  `AWS_ENDPOINT_URL=http://localhost.floci.io:4566` (alcanzable) en cada Lambda —
-  el propio override lo estaba rompiendo. La lambda de Lomax simplemente no fija
-  esa variable y usa la que FLOCI ya provee.
+- **Hallazgo de infraestructura, con dos vueltas — buen tema para la defensa
+  porque muestra depuración iterativa, no una respuesta memorizada**:
+  1. Primer intento: se fijó `AWS_ENDPOINT_URL=http://floci:4566` a mano. Falló con
+     `getaddrinfo ENOTFOUND floci`. Con una Lambda de diagnóstico que imprimía
+     `process.env` se descubrió que FLOCI auto-inyecta su propio
+     `AWS_ENDPOINT_URL=http://localhost.floci.io:4566` en cada Lambda — la
+     solución en ese momento fue no fijar la variable y dejar la de FLOCI.
+  2. Semanas después (tras varios `floci stop`/`start` durante las etapas de RDS y
+     ECR), ese mismo `localhost.floci.io` dejó de resolver — el sintoma cambió a
+     `ECONNREFUSED 127.0.0.1:4566` y hasta un timeout intentando resolver el
+     nombre por DNS, probablemente porque esa resolución depende de DNS externo
+     y algo en los reinicios lo rompió. Se confirmó revisando
+     `AWS_LAMBDA_RUNTIME_API` en el entorno de la Lambda (cae en el rango de la
+     red docker `floci-net`, `10.0.16.0/24`) y comparando contra
+     `docker inspect floci`: el contenedor floci sí está en `floci-net` **y
+     tiene ahí el nombre `floci` registrado en el DNS interno** (a diferencia de
+     la red `bridge`, donde no resuelve nada). Con esa evidencia, fijar
+     `AWS_ENDPOINT_URL=http://floci:4566` explícitamente pasó de "roto" a
+     "correcto" — el primer intento no estaba mal en la idea, estaba probado en
+     la red equivocada.
+  3. Moraleja para la defensa: nunca se asumió que un fix anterior seguía
+     vigente sin volver a probarlo. `ops/etapa3/implementacion.sh` ahora fija
+     `AWS_ENDPOINT_URL=http://floci:4566` de forma explícita (ya no depende del
+     auto-inyectado de FLOCI) y también re-aplica esa configuración si la
+     función ya existía, para que un reintento posterior quede sano.
 
 ## Etapa 4 — Backend y endpoints (5% Backend + reto "ejecutar endpoints, interpretar
 respuestas, completar pendiente sin crear otro producto")
@@ -135,6 +150,16 @@ dashboard, demostrar que los datos provienen de los servicios")
   defensa de que "conectividad con FLOCI" no es un detalle trivial: cada pieza nueva
   (Lambda, backend suelto, backend en compose, y más adelante los Pods de Etapa 7)
   tuvo que resolver el mismo problema de red de una forma distinta.
+- **Bug de configuración (no de red) encontrado despues de entregar la etapa**: un
+  archivo de ~2Mb (bien por debajo del límite de 5Mb que exige el backend) se
+  rechazaba con 413 igual. La causa no era `multer` (su límite sí es 5Mb): era
+  `proxy/nginx.conf`, que nunca fijó `client_max_body_size` — nginx trae por
+  defecto **1Mb**, y cortaba la subida antes de que llegara al backend. Se agregó
+  `client_max_body_size 6m;` a nivel de `server` (un poco por encima de los 5Mb
+  reales para no clipear el overhead del multipart). Buen recordatorio para la
+  defensa: un límite "de la aplicación" puede estar duplicado, sin querer, en la
+  capa de proxy — hay que probar el límite real de punta a punta, no solo el
+  código del backend.
 
 ## Etapa 6 — Imágenes en ECR (5% ECR + reto "push, digest remoto, pull, ejecución")
 
