@@ -68,7 +68,7 @@ dimensiones, reintentos sin duplicados")
   archivo), y eso dispara la rama de `estado_imagen = ERROR`.
 - Explicar la proporción: 1200×800 → 300×200 porque el lado limitante es el ancho
   (300/1200 = 0.25, aplicado a 800 = 200) — `scaleToFit` hace exactamente eso.
-- **Hallazgo de infraestructura, con dos vueltas — buen tema para la defensa
+- **Hallazgo de infraestructura, con tres vueltas — buen tema para la defensa
   porque muestra depuración iterativa, no una respuesta memorizada**:
   1. Primer intento: se fijó `AWS_ENDPOINT_URL=http://floci:4566` a mano. Falló con
      `getaddrinfo ENOTFOUND floci`. Con una Lambda de diagnóstico que imprimía
@@ -88,11 +88,22 @@ dimensiones, reintentos sin duplicados")
      `AWS_ENDPOINT_URL=http://floci:4566` explícitamente pasó de "roto" a
      "correcto" — el primer intento no estaba mal en la idea, estaba probado en
      la red equivocada.
-  3. Moraleja para la defensa: nunca se asumió que un fix anterior seguía
-     vigente sin volver a probarlo. `ops/etapa3/implementacion.sh` ahora fija
-     `AWS_ENDPOINT_URL=http://floci:4566` de forma explícita (ya no depende del
-     auto-inyectado de FLOCI) y también re-aplica esa configuración si la
-     función ya existía, para que un reintento posterior quede sano.
+  3. Tercer episodio (tras un reinicio del sistema, no de floci): la red
+     `floci-net` había desaparecido por completo — `docker inspect floci` ya no
+     la listaba — así que `http://floci:4566` volvió a dar
+     `getaddrinfo ENOTFOUND floci`, esta vez porque los contenedores de Lambda
+     habían vuelto a caer en `bridge` (confirmado otra vez con
+     `AWS_LAMBDA_RUNTIME_API`). Dos hostnames distintos ya habían demostrado
+     romperse según qué red tocara en cada arranque. La solución definitiva:
+     dejar de apostar a un hostname y usar la **IP real** de `floci` en su red
+     `bridge` (`docker inspect floci --format
+     '{{.NetworkSettings.Networks.bridge.IPAddress}}'`), que no depende de
+     ningún DNS y se recalcula en cada corrida de
+     `ops/etapa3/implementacion.sh`.
+  4. Moraleja para la defensa: nunca se asumió que un fix anterior seguía
+     vigente sin volver a probarlo — un hostname que "ya se había arreglado"
+     se rompió dos veces más por razones distintas. La solución robusta no fue
+     memorizar el valor correcto, fue dejar de depender de uno fijo.
 
 ## Etapa 4 — Backend y endpoints (5% Backend + reto "ejecutar endpoints, interpretar
 respuestas, completar pendiente sin crear otro producto")

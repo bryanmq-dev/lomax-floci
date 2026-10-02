@@ -11,15 +11,16 @@ aws s3 mb s3://lomax-miniaturas 2>/dev/null || echo "lomax-miniaturas ya existe"
 # --- Empaquetar y desplegar la Lambda ---
 bash lambda/build.sh
 
-# Los contenedores de ejecucion de Lambda corren en la red docker "floci-net"
-# (confirmado: AWS_LAMBDA_RUNTIME_API cae en ese rango), una red definida por el
-# usuario donde "floci" SI resuelve por DNS de contenedor (a diferencia de la
-# red "bridge" por defecto, donde no resuelve nada -- ver Etapa 4/5/6/7). FLOCI
-# tambien auto-inyecta su propio AWS_ENDPOINT_URL (http://localhost.floci.io:4566),
-# pero esa resolucion depende de DNS externo y se rompio tras varios
-# floci stop/start; "http://floci:4566" es la version estable, verificada
-# despues del hallazgo. Ver docs/defensa/guion-defensa.md (Etapa 3).
-LAMBDA_ENV="Variables={AWS_ENDPOINT_URL=http://floci:4566,BUCKET_MINIATURAS=lomax-miniaturas,TABLE_ATRIBUTOS=LomaxAtributos}"
+# A que red docker quedan los contenedores de ejecucion de Lambda (bridge o
+# floci-net) depende de como arranco floci esa sesion, y cambia solo con un
+# reinicio del sistema o un floci stop/start -- ya se vio romperse por un
+# hostname fijo DOS VECES ("floci" sin resolver en bridge, y luego
+# "localhost.floci.io" sin resolver tras perder floci-net). En vez de apostar
+# a un hostname, se usa la IP real de floci en su red "bridge" (siempre
+# presente, a diferencia de floci-net), resuelta en cada run -- nunca depende
+# de DNS. Ver docs/defensa/guion-defensa.md (Etapa 3).
+FLOCI_IP=$(docker inspect floci --format '{{.NetworkSettings.Networks.bridge.IPAddress}}')
+LAMBDA_ENV="Variables={AWS_ENDPOINT_URL=http://$FLOCI_IP:4566,BUCKET_MINIATURAS=lomax-miniaturas,TABLE_ATRIBUTOS=LomaxAtributos}"
 
 if aws lambda get-function --function-name lomax-generar-miniatura >/dev/null 2>&1; then
   echo "lomax-generar-miniatura ya existe, actualizando codigo y variables"
